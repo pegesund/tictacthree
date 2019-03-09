@@ -42,18 +42,36 @@ terminate(_Gesture, Event) :-
     writeln("terminated").
 
 run(BoardSize) :-
-    BorderSize = 30,
-    CellSize = 30,
-    XSize is CellSize * BoardSize,
-    YSize is CellSize * BoardSize,
-
-    new(@pict, window('Foxface', size(400, 200))),
-    addCircle(_C),
+    % BS is BoardSize - 1,
+    BorderSize = 120,
+    CellSize = 90,
+    PenSize = 3,
+    XSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize),
+    YSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize),
+    new(@pict, window('Foxface', size(XSize, YSize))),
+    (   between(0, BoardSize, I),
+        XStart is (I * (CellSize + PenSize)) + BorderSize,
+        YStart is BorderSize,
+        YStop is BorderSize + (BoardSize * (CellSize +  PenSize)),
+        send(@pict, display, new(Line, line(XStart, YStart, XStart, YStop))),
+        send(Line, colour, blue), send(Line, pen, 3),
+        fail ; true
+    ),
+    (   between(0, BoardSize, I),
+        XStart is BorderSize,
+        YStart is (I * (CellSize + PenSize)) + BorderSize,
+        XStop is BorderSize + (BoardSize * (CellSize +  PenSize)),
+        send(@pict, display, new(Line, line(XStart, YStart, XStop, YStart))),
+        send(Line, colour, blue), send(Line, pen, 3),
+        fail ; true
+    ),
+    CircleSize is round(CellSize * 0.75),
+    addCircle(_C, CircleSize),
     send(@pict, open).
 
-addCircle(Circle) :-
+addCircle(Circle, CircleSize) :-
     send(@pict, display,
-          new(Circle, circle(50)), point(25,25)),
+          new(Circle, circle(CircleSize)), point(25,25)),
     send(Circle, colour(red)),
     send(Circle, fill_pattern, colour(red)),
     send(Circle, recogniser, new(@make_piece_gesture)),
