@@ -30,3 +30,14 @@ evalMatrix(Matrix, X, Y, P, Acc, Score) :-
     evalMatrix(Matrix, NewX, Y, P, NewAcc, Score), !.
 getScore(Matrix, Person, Score) :- evalMatrix(Matrix, 0, 0, Person, 0, Score).
 
+
+
+
+
+
+
+
+
+
+
+
