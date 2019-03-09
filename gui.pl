@@ -86,7 +86,6 @@ run(BoardSize) :-
     writeln("Circle added"),
     assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
     writeln("Circle added2"),
-    b_getval(sizes, XXX), writeln(XXX),
     send(@pict, open).
 
 addCircle(Circle, CircleSize) :-
