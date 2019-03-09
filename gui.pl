@@ -2,6 +2,8 @@
 
 :- pce_global(@make_piece_gesture, make_move_piece_gesture).
 
+dynamic(sizes).
+
 make_move_piece_gesture(G) :-
     new(G, move_gesture(left)),
     send(G, send_method,
@@ -31,15 +33,29 @@ verify(_Gesture, Event) :-
      get(Event, x, X),
      get(Event, y, Y),
      nb_linkval(pos, (X,Y)),
-     writeln(X),
      true.
 
 terminate(_Gesture, Event) :-
     % get(Event, x, X),
     get(Event, receiver, R),
+    b_getval(pos, (X2, Y2)),
+    sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize),
+    get(R, device, Dev),
+    get(Event, x, Dev, X),
+    get(Event, y, Dev, Y),
+    XMouse is X - X2,
+    YMouse is Y - Y2,
+    Adjust is round((CellSize - CircleSize) / 2),
+    CellX is round((XMouse - BorderSize) / ((PenSize + CellSize))),
+    CellY is round((YMouse - BorderSize) / ((PenSize + CellSize))),
+    CellX >= 0, CellX < BoardSize,
+    CellY >= 0, CellY < BoardSize, !,
+    XNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellX),
+    YNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellY),
     send(R, fill_pattern, colour(red)),
-    writeln(R),
-    writeln("terminated").
+    send(R, x, XNewPos),
+    send(R, y, YNewPos).
+
 
 run(BoardSize) :-
     % BS is BoardSize - 1,
@@ -67,6 +83,10 @@ run(BoardSize) :-
     ),
     CircleSize is round(CellSize * 0.75),
     addCircle(_C, CircleSize),
+    writeln("Circle added"),
+    assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
+    writeln("Circle added2"),
+    b_getval(sizes, XXX), writeln(XXX),
     send(@pict, open).
 
 addCircle(Circle, CircleSize) :-
@@ -74,11 +94,6 @@ addCircle(Circle, CircleSize) :-
           new(Circle, circle(CircleSize)), point(25,25)),
     send(Circle, colour(red)),
     send(Circle, fill_pattern, colour(red)),
-    send(Circle, recogniser, new(@make_piece_gesture)),
-    send(Circle, send_method,
-         send_method(verify, vector(event),
-                     message(@prolog, verify, @receiver, @arg1))),
-    send(Circle, send_method,
-         send_method(terminate, vector(event),
-                     message(@prolog, terminate, @receiver, @arg1))).
+    send(Circle, recogniser, new(@make_piece_gesture)).
+
 
