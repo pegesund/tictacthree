@@ -88,7 +88,7 @@ test(update_board_move_more_than_one_in_distance, fail) :-
         writeln("Testing update of board with to long move"),
         generate_reserves(3, Reserves),
         Board = [[1,2,3],[0,0,0],[0,0,0]],
-        move((board,0,0), Board, Reserves, 1, 2, 2, _NewGame).
+        move((board,0,0), Board, Reserves, 2, 2, 2, _NewGame).
 
 
 test(reverse) :-

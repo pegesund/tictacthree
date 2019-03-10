@@ -37,7 +37,6 @@ verify(_Gesture, Event) :-
      true.
 
 terminate(_Gesture, Event) :-
-    % get(Event, x, X),
     get(Event, receiver, R),
     b_getval(pos, (X2, Y2)),
     sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize),
@@ -51,6 +50,7 @@ terminate(_Gesture, Event) :-
     CellY is round((YMouse - BorderSize) / ((PenSize + CellSize))),
     CellX >= 0, CellX < BoardSize,
     CellY >= 0, CellY < BoardSize, !,
+    writeln((CellX,CellY)),
     XNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellX),
     YNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellY),
     send(R, fill_pattern, colour(red)),
@@ -58,7 +58,16 @@ terminate(_Gesture, Event) :-
     send(R, y, YNewPos).
 
 
-run(BoardSize) :-
+add_balls(StartX, StartY, Num, Colour, CircleSize) :-
+    N is Num - 1,
+    (   between(0, N, I),
+        X is StartX + round(I * CircleSize * 1.2),
+        addCircle(CircleSize, X, StartY, Colour, _Circle),
+        false ; true
+    ).
+
+
+run(BoardSize, NumBalls) :-
     BorderSize = 120,
     CellSize = 80,
     PenSize = 3,
@@ -66,6 +75,7 @@ run(BoardSize) :-
     AdminSize is round(CellSize * 3),
     XSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize),
     YSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize) + AdminSize,
+    StartYBalls is YSize - AdminSize - round(BorderSize/2),
     new(@pict, window('Foxface', size(XSize, YSize))),
     (   between(0, BoardSize, I),
         XStart is (I * (CellSize + PenSize)) + BorderSize,
@@ -84,15 +94,19 @@ run(BoardSize) :-
         fail ; true
     ),
     CircleSize is round(CellSize * 0.75),
-    addCircle(_C, CircleSize),
+    add_balls(BorderSize, StartYBalls, NumBalls, red, CircleSize),
+    StartYBallsBlue is StartYBalls + CellSize,
+    add_balls(BorderSize, StartYBallsBlue, NumBalls, blue, CircleSize),
+    StartYBallsGreen is StartYBallsBlue + CellSize,
+    add_balls(BorderSize, StartYBallsGreen, NumBalls, green, CircleSize),
     assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
     send(@pict, open).
 
-addCircle(Circle, CircleSize) :-
+addCircle(CircleSize, X, Y, Colour, Circle) :-
     send(@pict, display,
-          new(Circle, circle(CircleSize)), point(25,25)),
-    send(Circle, colour(red)),
-    send(Circle, fill_pattern, colour(red)),
+          new(Circle, circle(CircleSize)), point(X,Y)),
+    send(Circle, colour(black)),
+    send(Circle, fill_pattern, colour(Colour)),
     send(Circle, recogniser, new(@make_piece_gesture)).
 
 
