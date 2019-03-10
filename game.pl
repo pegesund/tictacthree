@@ -1,4 +1,14 @@
-:- module(game, [move/7, generate_reserves/2]).
+:- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2]).
+
+dynamic(game).
+
+players([red, blue, green]).
+
+player_colour(I, Colour) :- J is I mod 3, players(Players), nth0(J, Players, Colour).
+
+empty_board(Size, Board) :-
+  findall(0, between(1, Size, _), Row),
+  findall(Row,  between(1, Size, _), Board).
 
 replace_element_at(0, [_|L], E, [E|L]).
 replace_element_at(N, [X|L], E, [X|R]) :-
@@ -37,6 +47,14 @@ move(Source, Board, Reserves, Player, ToX, ToY, NewGame) :-
 
 
 generate_reserves(NumBalls, [[1,NumBalls],[2,NumBalls],[3,NumBalls]]).
+
+set_game(Game) :-
+  retractall(game(_)),
+  assert(game(Game)).
+
+get_game(Game) :-
+  game(Game).
+
 
 :- begin_tests(game).
 :- use_module(game).

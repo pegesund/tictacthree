@@ -102,6 +102,10 @@ run(BoardSize, NumBalls) :-
     StartYBallsGreen is StartYBallsBlue + CellSize,
     add_balls(BorderSize, StartYBallsGreen, NumBalls, green, CircleSize),
     assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
+    generate_reserves(NumBalls, Reserves),
+    Turn = 0,
+    empty_board(BoardSize, Board),
+    set_game((Board, Reserves, Turn)),
     send(@pict, open).
 
 addCircle(CircleSize, X, Y, Colour, Circle) :-
