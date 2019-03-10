@@ -31,6 +31,7 @@ drag(_Gesture, Event) :-
 
 verify(_Gesture, Event) :-
      get(Event, receiver, R),
+     send(R, expose),
      send(R, fill_pattern, gray),
      get(Event, x, X),
      get(Event, y, Y),
