@@ -1,6 +1,7 @@
 :- use_module(library(pce)).
 
 :- pce_global(@make_piece_gesture, make_move_piece_gesture).
+:- use_module(game).
 
 dynamic(sizes).
 
@@ -58,12 +59,13 @@ terminate(_Gesture, Event) :-
 
 
 run(BoardSize) :-
-    % BS is BoardSize - 1,
     BorderSize = 120,
-    CellSize = 90,
+    CellSize = 80,
     PenSize = 3,
+    CircleSize is round(CellSize * 0.75),
+    AdminSize is round(CellSize * 3),
     XSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize),
-    YSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize),
+    YSize is (CellSize * BoardSize) + (PenSize * BoardSize) + (2 * BorderSize) + AdminSize,
     new(@pict, window('Foxface', size(XSize, YSize))),
     (   between(0, BoardSize, I),
         XStart is (I * (CellSize + PenSize)) + BorderSize,
@@ -83,9 +85,7 @@ run(BoardSize) :-
     ),
     CircleSize is round(CellSize * 0.75),
     addCircle(_C, CircleSize),
-    writeln("Circle added"),
     assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
-    writeln("Circle added2"),
     send(@pict, open).
 
 addCircle(Circle, CircleSize) :-
