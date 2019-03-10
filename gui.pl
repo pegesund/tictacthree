@@ -2,6 +2,11 @@
 
 :- pce_global(@make_piece_gesture, make_move_piece_gesture).
 :- use_module(game).
+:- free(@score).
+:- free(@red_score).
+:- free(@green_score).
+:- free(@blue_score).
+:- free(@turn).
 
 dynamic(sizes).
 
@@ -30,13 +35,27 @@ drag(_Gesture, Event) :-
      send(R, y, Y3).
 
 verify(_Gesture, Event) :-
-     get(Event, receiver, R),
-     send(R, expose),
-     send(R, fill_pattern, gray),
-     get(Event, x, X),
-     get(Event, y, Y),
-     nb_linkval(pos, (X,Y)),
-     true.
+    sizes(BorderSize, CellSize, PenSize, _CircleSize, BoardSize),
+    get(Event, receiver, R),
+    get(R, device, Dev),
+    get(Event, x, Dev, DX),
+    get(Event, y, Dev, DY),
+    get(Event, x, X),
+    get(Event, y, Y),
+    nb_linkval(pos, (X,Y)),
+    XMouse is DX - X,
+    YMouse is DY - Y,
+    CellX is round((XMouse - BorderSize) / ((PenSize + CellSize))),
+    CellY is round((YMouse - BorderSize) / ((PenSize + CellSize))),
+    BSD is BoardSize - 1,
+    (   (CellX > BSD ; CellY > BSD ; CellY < 0 ; CellX < 0 )
+        -> DragReserve = true ; DragReserve = false
+    ),
+    writeln(("Dragreserve: ", DragReserve)),
+    writeln((CellX, CellY)),
+    send(R, expose),
+    send(R, fill_pattern, gray),
+    true.
 
 terminate(_Gesture, Event) :-
     get(Event, receiver, R),
@@ -106,6 +125,7 @@ run(BoardSize, NumBalls) :-
     Turn = 0,
     empty_board(BoardSize, Board),
     set_game((Board, Reserves, Turn)),
+    addScore(),
     send(@pict, open).
 
 addCircle(CircleSize, X, Y, Colour, Circle) :-
@@ -115,4 +135,15 @@ addCircle(CircleSize, X, Y, Colour, Circle) :-
     send(Circle, fill_pattern, colour(Colour)),
     send(Circle, recogniser, new(@make_piece_gesture)).
 
+addScore() :-
+    send(@pict, display, new(@score, text("Score:"))), send(@score, x, 15), send(@score, y, 50),
+    send(@score, font, font(helvetica,roman,30)),
+    send(@pict, display, new(@red_score, text("0"))), send(@red_score, x, 150), send(@red_score, y, 50),
+    send(@red_score, font, font(helvetica,roman,30)), send(@red_score, colour, red),
+    send(@pict, display, new(@green_score, text("0"))), send(@green_score, x, 250), send(@green_score, y, 50),
+    send(@green_score, font, font(helvetica,roman,30)), send(@green_score, colour, green),
+    send(@pict, display, new(@blue_score, text("0"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
+    send(@blue_score, font, font(helvetica,roman,30)), send(@blue_score, colour, blue),
+    send(@pict, display, new(@turn, circle(30)), point(400, 50)),
+    send(@turn, fill_pattern, colour(red)).
 
