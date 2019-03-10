@@ -5,6 +5,7 @@
 
 dynamic(sizes).
 
+
 make_move_piece_gesture(G) :-
     new(G, move_gesture(left)),
     send(G, send_method,
@@ -50,10 +51,10 @@ terminate(_Gesture, Event) :-
     CellY is round((YMouse - BorderSize) / ((PenSize + CellSize))),
     CellX >= 0, CellX < BoardSize,
     CellY >= 0, CellY < BoardSize, !,
-    writeln((CellX,CellY)),
     XNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellX),
     YNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellY),
-    send(R, fill_pattern, colour(red)),
+    get(R, colour, colour(Colour)),
+    send(R, fill_pattern, colour(Colour)),
     send(R, x, XNewPos),
     send(R, y, YNewPos).
 
@@ -105,7 +106,7 @@ run(BoardSize, NumBalls) :-
 addCircle(CircleSize, X, Y, Colour, Circle) :-
     send(@pict, display,
           new(Circle, circle(CircleSize)), point(X,Y)),
-    send(Circle, colour(black)),
+    send(Circle, colour(Colour)),
     send(Circle, fill_pattern, colour(Colour)),
     send(Circle, recogniser, new(@make_piece_gesture)).
 
