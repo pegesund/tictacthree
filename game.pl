@@ -17,7 +17,9 @@ use_reserve((reserves,_,_), Reserves, PlayerId, NewReserves) :-
     NewNum is Num - 1,
     NewReserves = [[PlayerId, NewNum]|TempR], !.
 
-move_from((board,FromX, FromY), Board, Player, NewBoard) :-
+move_from((board,FromX, FromY), Board, Player, ToX, ToY, NewBoard) :-
+        abs(FromX - ToX) < 2,
+        abs(FromY - ToY) < 2,
         nth0(FromY, Board, Row),
         nth0(FromX, Row, Cell),
         Cell == Player,
@@ -25,7 +27,7 @@ move_from((board,FromX, FromY), Board, Player, NewBoard) :-
 
 move(Source, Board, Reserves, Player, ToX, ToY, NewGame) :-
         (   (BoardAfterFrom = Board, use_reserve(Source, Reserves, Player, NewReserves)), ! ;
-            NewReserves = Reserves, move_from(Source, Board, Player, BoardAfterFrom), !
+            NewReserves = Reserves, move_from(Source, Board, Player, ToX, ToY, BoardAfterFrom), !
         ),
         nth0(ToY, Board, Row),
         nth0(ToX, Row, Cell),
@@ -82,6 +84,11 @@ test(update_board_from_reserves_non_existing, fail) :-
         writeln((NewBoard,NewReserves)),
         move((reserves,_,_), NewBoard, NewReserves, 1, 2, 1, _NewGame).
 
+test(update_board_move_more_than_one_in_distance, fail) :-
+        writeln("Testing update of board with to long move"),
+        generate_reserves(3, Reserves),
+        Board = [[1,2,3],[0,0,0],[0,0,0]],
+        move((board,0,0), Board, Reserves, 1, 2, 2, _NewGame).
 
 
 test(reverse) :-
