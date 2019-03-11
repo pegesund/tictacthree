@@ -9,6 +9,7 @@
 :- free(@turn).
 
 dynamic(sizes).
+dynamic(balls).
 
 
 make_move_piece_gesture(G) :-
@@ -105,7 +106,7 @@ run(BoardSize, NumBalls) :-
         send(@pict, display, new(Line, line(XStart, YStart, XStart, YStop))),
         send(Line, colour, blue), send(Line, pen, 3),
         fail ; true
-    ),
+    ), !,
     (   between(0, BoardSize, I),
         XStart is BorderSize,
         YStart is (I * (CellSize + PenSize)) + BorderSize,
@@ -114,7 +115,8 @@ run(BoardSize, NumBalls) :-
         send(Line, colour, blue), send(Line, pen, 3),
         fail ; true
     ),
-    CircleSize is round(CellSize * 0.75),
+
+    sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize), !,   CircleSize is round(CellSize * 0.75),
     add_balls(BorderSize, StartYBalls, NumBalls, red, CircleSize),
     StartYBallsBlue is StartYBalls + CellSize,
     add_balls(BorderSize, StartYBallsBlue, NumBalls, blue, CircleSize),
@@ -133,7 +135,8 @@ addCircle(CircleSize, X, Y, Colour, Circle) :-
           new(Circle, circle(CircleSize)), point(X,Y)),
     send(Circle, colour(Colour)),
     send(Circle, fill_pattern, colour(Colour)),
-    send(Circle, recogniser, new(@make_piece_gesture)).
+    send(Circle, recogniser, new(@make_piece_gesture)),
+    assert(ball(Circle)).
 
 addScore() :-
     send(@pict, display, new(@score, text("Score:"))), send(@score, x, 15), send(@score, y, 50),
@@ -147,3 +150,11 @@ addScore() :-
     send(@pict, display, new(@turn, circle(30)), point(500, 50)),
     send(@turn, fill_pattern, colour(red)).
 
+ballAtCoordinate(X,Y,C) :-
+    sizes(BorderSize, CellSize, PenSize, _CircleSize, _BoardSize),
+    CX is (X * (PenSize + CellSize)) + BorderSize,
+    CY is (Y * (PenSize + CellSize)) + BorderSize,
+    ball(C),
+    get(C, position, point(PX,PY)),
+    PX >= CX, PX < CX + CellSize ,
+    PY >= CY, PY < CY + CellSize , !.

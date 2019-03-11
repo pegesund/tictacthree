@@ -36,6 +36,7 @@ evalMatrix(Matrix, X, Y, P, Acc, Score) :-
     NewAcc is Acc + S1 + S2 + S3 + S4,
     NewX is X + 1,
     evalMatrix(Matrix, NewX, Y, P, NewAcc, Score), !.
+
 getScore(Matrix, Person, Score) :- evalMatrix(Matrix, 0, 0, Person, 0, Score).
 
 :- begin_tests(eval).
