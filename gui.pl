@@ -142,8 +142,8 @@ addScore() :-
     send(@red_score, font, font(helvetica,roman,30)), send(@red_score, colour, red),
     send(@pict, display, new(@green_score, text("0"))), send(@green_score, x, 250), send(@green_score, y, 50),
     send(@green_score, font, font(helvetica,roman,30)), send(@green_score, colour, green),
-    send(@pict, display, new(@blue_score, text("0"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
+    send(@pict, display, new(@blue_score, text("1000"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
     send(@blue_score, font, font(helvetica,roman,30)), send(@blue_score, colour, blue),
-    send(@pict, display, new(@turn, circle(30)), point(400, 50)),
+    send(@pict, display, new(@turn, circle(30)), point(500, 50)),
     send(@turn, fill_pattern, colour(red)).
 
