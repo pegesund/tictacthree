@@ -1,6 +1,9 @@
-:- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2, players/1]).
+:- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2, players/1,
+                 clean_score/0, add_score/2, get_score/2
+                ]).
 
 dynamic(game).
+dynamic(score).
 
 players([red, blue, green]).
 
@@ -9,6 +12,21 @@ player_colour(I, Colour) :- J is (I - 1) mod 3, players(Players), nth0(J, Player
 empty_board(Size, Board) :-
   findall(0, between(1, Size, _), Row),
   findall(Row,  between(1, Size, _), Board).
+
+clean_score :-
+  retractall(score(_)),
+  empty_assoc(Score),
+  assert(score(Score)).
+
+add_score(Player, PlayerScore) :-
+  score(Score), !,
+  (   get_assoc(Player, Score, OldPlayerScore) ; OldPlayerScore = 0 ), !,
+  NewPlayerScore is OldPlayerScore + PlayerScore,
+  put_assoc(Player, Score, NewPlayerScore, NewScore),
+  retractall(score(_)),
+  assert(score(NewScore)).
+
+get_score(Player, PlayerScore) :- score(Score), !, ( get_assoc(Player, Score, PlayerScore) ; PlayerScore = 0), !.
 
 replace_element_at(0, [_|L], E, [E|L]).
 replace_element_at(N, [X|L], E, [X|R]) :-

@@ -2,6 +2,7 @@
 
 :- pce_global(@make_piece_gesture, make_move_piece_gesture).
 :- use_module(game).
+:- use_module(eval).
 
 dynamic(sizes).
 dynamic(balls).
@@ -130,12 +131,13 @@ add_balls(StartX, StartY, Num, Colour, CircleSize) :-
 
 run(BoardSize, NumBalls) :-
     free_globals,
+    clean_score,
     retractall(ball(_)),
     retractall(reserved(_,_)),
     retractall(sizes(_, _, _, _, _)),
     retractall(move_time(_)),
     retractall(round(_,_)),
-    assert(move_time(10)),
+    assert(move_time(5)),
     assert(round(5,60)),
     retractall(progress(_)),
     assert(progress(0)),
@@ -209,7 +211,8 @@ update_move_timer :-
     NewProgress is P + 1,
     retractall(progress(_)),
     assert(progress(NewProgress)),
-    adjustPercentage.
+    adjustPercentage,
+    adjustScore.
 
 
 
@@ -222,7 +225,7 @@ addScore() :-
     send(@red_score, font, font(helvetica,roman,30)), send(@red_score, colour, red),
     send(@pict, display, new(@green_score, text("0"))), send(@green_score, x, 250), send(@green_score, y, 50),
     send(@green_score, font, font(helvetica,roman,30)), send(@green_score, colour, green),
-    send(@pict, display, new(@blue_score, text("1000"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
+    send(@pict, display, new(@blue_score, text("0"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
     send(@blue_score, font, font(helvetica,roman,30)), send(@blue_score, colour, blue),
     send(@pict, display, new(@turn, circle(30)), point(500, 50)),
     send(@turn, fill_pattern, colour(red)),
@@ -290,3 +293,39 @@ adjustPercentage :-
     ProgPercentage is Prog / TotalSecs,
     NewWidth is round(ProgPercentage  * WTotal),
     send(@rounds_back, width, NewWidth).
+
+
+updateScore(red, Score) :-
+    send(@red_score, string, Score), !.
+updateScore(blue, Score) :-
+    send(@blue_score, string, Score), !.
+updateScore(green, Score) :-
+    send(@green_score, string, Score), !.
+
+
+adjustScore :-
+     round(_Rounds, RSize),
+     progress(P),
+     D is P mod RSize,
+     D == 0,
+     players(Players),
+     length(Players, PL),
+     get_game((Board, _Reserves, _Turn)), !,
+     (   between(1, PL, I),
+         getScore(Board, I, Score),
+         add_score(I, Score),
+         PI is I - 1,
+         nth0(PI, Players, Colour),
+         get_score(I, NewScore),
+         updateScore(Colour, NewScore),
+         fail ; true
+     ), fail.
+
+adjustScore :-
+     round(Rounds, RSize),
+     progress(P),
+     Total is Rounds * RSize,
+     P >= Total,
+     send(@timer_move, stop), !.
+
+adjustScore :- !.
