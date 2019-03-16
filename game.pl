@@ -1,10 +1,10 @@
-:- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2]).
+:- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2, players/1]).
 
 dynamic(game).
 
 players([red, blue, green]).
 
-player_colour(I, Colour) :- J is I mod 3, players(Players), nth0(J, Players, Colour).
+player_colour(I, Colour) :- J is (I - 1) mod 3, players(Players), nth0(J, Players, Colour).
 
 empty_board(Size, Board) :-
   findall(0, between(1, Size, _), Row),
@@ -54,6 +54,9 @@ set_game(Game) :-
 
 get_game(Game) :-
   game(Game).
+
+new_game() :-
+  retractall(game(_)).
 
 
 :- begin_tests(game).

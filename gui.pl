@@ -2,14 +2,26 @@
 
 :- pce_global(@make_piece_gesture, make_move_piece_gesture).
 :- use_module(game).
-:- free(@score).
-:- free(@red_score).
-:- free(@green_score).
-:- free(@blue_score).
-:- free(@turn).
 
 dynamic(sizes).
 dynamic(balls).
+dynamic(reserved).
+dynamic(move_time).
+dynamic(round).
+dynamic(progress).
+
+
+free_globals :-
+ free(@score),
+ free(@red_score),
+ free(@green_score),
+ free(@blue_score),
+ free(@turn),
+ free(@time_move), free(@timer_move),
+ free(@pict),
+ free(@rounds),
+ free(@rounds_back).
+
 
 
 make_move_piece_gesture(G) :-
@@ -35,28 +47,52 @@ drag(_Gesture, Event) :-
      send(R, x, X3),
      send(R, y, Y3).
 
+allowMoveFrom(Circle) :-
+    get_game((_Board, _Reserves, Turn)), !,
+    player_colour(Turn, Col),
+    get(Circle, colour, colour(Col)).
+
+
 verify(_Gesture, Event) :-
     sizes(BorderSize, CellSize, PenSize, _CircleSize, BoardSize),
     get(Event, receiver, R),
+    get(R, position, point(XScreen, YScreen)),
     get(R, device, Dev),
     get(Event, x, Dev, DX),
     get(Event, y, Dev, DY),
     get(Event, x, X),
     get(Event, y, Y),
+    allowMoveFrom(R),
     nb_linkval(pos, (X,Y)),
+    nb_linkval(pos_screen, (XScreen, YScreen)),
     XMouse is DX - X,
     YMouse is DY - Y,
     CellX is round((XMouse - BorderSize) / ((PenSize + CellSize))),
     CellY is round((YMouse - BorderSize) / ((PenSize + CellSize))),
     BSD is BoardSize - 1,
     (   (CellX > BSD ; CellY > BSD ; CellY < 0 ; CellX < 0 )
-        -> DragReserve = true ; DragReserve = false
+        -> DragReserve = reserves ; DragReserve = board
     ),
-    writeln(("Dragreserve: ", DragReserve)),
-    writeln((CellX, CellY)),
+    % writeln(("Dragreserve: ", DragReserve)),
+    % writeln((CellX, CellY)),
+    nb_linkval(from_move, (DragReserve, CellX, CellY)),
     send(R, expose),
     send(R, fill_pattern, gray),
     true.
+
+newMove(X,Y) :-
+    get_game((Board, Reserves, Turn)), !,
+    b_getval(from_move, (DragReserve, FromXBoard, FromYBoard)),
+    % writeln(((DragReserve, FromXBoard, FromYBoard), Board, Reserves, Turn, X, Y, (NewBoard, NewReserves))),
+    move((DragReserve, FromXBoard, FromYBoard), Board, Reserves, Turn, X, Y, (NewBoard, NewReserves)),
+    NewTurn is (Turn mod 3) + 1,
+    player_colour(NewTurn, NewCol),
+    set_game((NewBoard, NewReserves, NewTurn)),
+    send(@turn, fill_pattern, colour(NewCol)),
+    move_time(MoveTime), !,
+    atom_string(MoveTime, MoveTimeStr),
+    send(@time_move, string, string(MoveTimeStr)).
+
 
 terminate(_Gesture, Event) :-
     get(Event, receiver, R),
@@ -74,10 +110,13 @@ terminate(_Gesture, Event) :-
     CellY >= 0, CellY < BoardSize, !,
     XNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellX),
     YNewPos is Adjust + BorderSize + ((CellSize + PenSize) * CellY),
+    (   newMove(CellX, CellY), XEndPos = XNewPos, YEndPos = YNewPos ;
+         b_getval(pos_screen,(XEndPos, YEndPos))
+    ),
     get(R, colour, colour(Colour)),
     send(R, fill_pattern, colour(Colour)),
-    send(R, x, XNewPos),
-    send(R, y, YNewPos).
+    send(R, x, XEndPos),
+    send(R, y, YEndPos).
 
 
 add_balls(StartX, StartY, Num, Colour, CircleSize) :-
@@ -90,6 +129,16 @@ add_balls(StartX, StartY, Num, Colour, CircleSize) :-
 
 
 run(BoardSize, NumBalls) :-
+    free_globals,
+    retractall(ball(_)),
+    retractall(reserved(_,_)),
+    retractall(sizes(_, _, _, _, _)),
+    retractall(move_time(_)),
+    retractall(round(_,_)),
+    assert(move_time(10)),
+    assert(round(5,60)),
+    retractall(progress(_)),
+    assert(progress(0)),
     BorderSize = 120,
     CellSize = 80,
     PenSize = 3,
@@ -116,7 +165,7 @@ run(BoardSize, NumBalls) :-
         fail ; true
     ),
 
-    sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize), !,   CircleSize is round(CellSize * 0.75),
+    CircleSize is round(CellSize * 0.75),
     add_balls(BorderSize, StartYBalls, NumBalls, red, CircleSize),
     StartYBallsBlue is StartYBalls + CellSize,
     add_balls(BorderSize, StartYBallsBlue, NumBalls, blue, CircleSize),
@@ -124,10 +173,14 @@ run(BoardSize, NumBalls) :-
     add_balls(BorderSize, StartYBallsGreen, NumBalls, green, CircleSize),
     assert(sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize)),
     generate_reserves(NumBalls, Reserves),
-    Turn = 0,
+    Turn = 1,
     empty_board(BoardSize, Board),
     set_game((Board, Reserves, Turn)),
     addScore(),
+    assert(reserved(red, StartYBalls)),
+    assert(reserved(green, StartYBallsGreen)),
+    assert(reserved(blue, StartYBallsBlue)),
+    writeln("CREATED"),
     send(@pict, open).
 
 addCircle(CircleSize, X, Y, Colour, Circle) :-
@@ -137,6 +190,30 @@ addCircle(CircleSize, X, Y, Colour, Circle) :-
     send(Circle, fill_pattern, colour(Colour)),
     send(Circle, recogniser, new(@make_piece_gesture)),
     assert(ball(Circle)).
+
+update_move_timer :-
+    get(@time_move, string, string(OldTime)),
+    atom_number(OldTime, I),
+    NewI is I - 1,
+    (   NewI == 0 ->
+         move_time(MoveTime), !, NewTime2 = MoveTime,
+         get_game((Board, Reserves, Turn)), !, NewTurn is (Turn mod 3) + 1,
+         player_colour(NewTurn, NewCol),
+         set_game((Board, Reserves, NewTurn)),
+         send(@turn, fill_pattern, colour(NewCol)) ;
+         NewTime2 = NewI
+    ),
+    number_string(NewTime2, NewTimeStr),
+    send(@time_move, string, string(NewTimeStr)),
+    progress(P),
+    NewProgress is P + 1,
+    retractall(progress(_)),
+    assert(progress(NewProgress)),
+    adjustPercentage.
+
+
+
+
 
 addScore() :-
     send(@pict, display, new(@score, text("Score:"))), send(@score, x, 15), send(@score, y, 50),
@@ -148,13 +225,68 @@ addScore() :-
     send(@pict, display, new(@blue_score, text("1000"))), send(@blue_score, x, 350), send(@blue_score, y, 50),
     send(@blue_score, font, font(helvetica,roman,30)), send(@blue_score, colour, blue),
     send(@pict, display, new(@turn, circle(30)), point(500, 50)),
-    send(@turn, fill_pattern, colour(red)).
+    send(@turn, fill_pattern, colour(red)),
+    move_time(MoveTime), !,
+    number_string(MoveTime, MoveTimeStr),
+    send(@pict, display, new(@time_move, text(MoveTimeStr))), send(@time_move, position, point(550, 50)), send(@time_move, font, font(helvetica,roman,30)),
+    new(@timer_move, timer(1, message(@prolog, update_move_timer))), send(@timer_move, start),
+    createRoundCounters.
+
 
 ballAtCoordinate(X,Y,C) :-
-    sizes(BorderSize, CellSize, PenSize, _CircleSize, _BoardSize),
+    sizes(BorderSize, CellSize, PenSize, _CircleSize, _BoardSize), !,
     CX is (X * (PenSize + CellSize)) + BorderSize,
     CY is (Y * (PenSize + CellSize)) + BorderSize,
-    ball(C),
+    ball(C), !,
     get(C, position, point(PX,PY)),
     PX >= CX, PX < CX + CellSize ,
     PY >= CY, PY < CY + CellSize , !.
+
+existBallWithin(SX, SY, CircleBorder) :-
+    ball(C),
+    get(C, position, point(BX,BY)),
+    SXEnd is SX + CircleBorder - 1, SYEnd is SY + CircleBorder,
+    between(SX, SXEnd, BX),
+    between(SY, SYEnd, BY),
+    !.
+
+findFreeReserve(Colour, Num) :-
+    sizes(BorderSize, _CellSize, _PenSize, CircleSize, BoardSize), !,
+    reserved(Colour, SY), !,
+    CircleBorder is round(CircleSize * 1.2),
+    between(0, BoardSize, I),
+    SX is BorderSize + round(CircleSize * 1.2 * I),
+    not(existBallWithin(SX, SY, CircleBorder)),
+    Num = I, !,
+    Num < BoardSize.
+
+createRoundCounters :-
+    new(@rounds, device),
+    round(Rounds, _RSize), !,
+    RoundsDec is Rounds - 1,
+    BoxWidth = 30,
+    BoxHeight = 20,
+    new(@rounds_back, box(0, BoxHeight)),
+    send(@rounds, display, @rounds_back, point(0,0)),
+    send(@rounds_back, pen, 0),
+    send(@rounds_back, fill_pattern, colour(orange)),
+    (   between(0,RoundsDec, I),
+        new(Box, box(BoxWidth, BoxHeight)),
+        send(Box, fill_pattern, @nil),
+        send(@rounds, display, Box),
+        X is I * BoxWidth,
+        send(Box, position, point(X,0)),
+        fail ; true
+    ),
+    send(@pict, display, @rounds),
+    send(@rounds, position, point(630,60)).
+
+adjustPercentage :-
+    BoxWidth = 30,
+    progress(Prog), !,
+    round(Rounds, RSize),
+    TotalSecs is Rounds * RSize,
+    WTotal is BoxWidth * Rounds,
+    ProgPercentage is Prog / TotalSecs,
+    NewWidth is round(ProgPercentage  * WTotal),
+    send(@rounds_back, width, NewWidth).

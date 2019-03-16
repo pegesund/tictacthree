@@ -1,4 +1,4 @@
-:- module(eval, [getScore/3]).
+:- module(eval, [getScore/3, checkZipStart/7]).
 
 evalPoint(Matrix, X, Y, XA, YA, P, Score) :-
     nth0(Y, Matrix, Row), nth0(X, Row, C),
@@ -11,6 +11,7 @@ evalPoint(Matrix, X, Y, XA, YA, P, Score) :-
          nth0(Y4, Matrix, R4), nth0(X4, R4, C4), C4 == P
     ),
     Score = 1, !.
+
 % wow - this is a litteraly a corner case :)
 evalPoint(Matrix, X, Y, XA, YA, P, Score) :-
     nth0(Y, Matrix, Row), nth0(X, Row, C),
@@ -38,6 +39,20 @@ evalMatrix(Matrix, X, Y, P, Acc, Score) :-
     evalMatrix(Matrix, NewX, Y, P, NewAcc, Score), !.
 
 getScore(Matrix, Person, Score) :- evalMatrix(Matrix, 0, 0, Person, 0, Score).
+
+checkZipStart(Board, Player, X, Y, DirX, DirY, NumZip) :-
+    NewY is Y + DirY, NewX is X + DirX,
+    nth0(NewY, Board, Row), nth0(NewX, Row, OtherPlayer),
+    checkZip(Board, Player, OtherPlayer, X, Y, DirX, DirY, 0, NumZip).
+
+checkZip(Board, Player, OtherPlayer, X, Y, DirX, DirY, NumZip, NumZipNew) :-
+    NewY is Y + DirY, NewX is X + DirX,
+    nth0(NewY, Board, Row), nth0(NewX, Row, OtherPlayerNew),
+    (   OtherPlayerNew == Player, NumZip >= 2 -> NumZipNew is NumZip + 1 ;
+        OtherPlayerNew == OtherPlayer -> NumZipNew2 is NumZip + 1,
+           checkZip(Board, Player, OtherPlayer, NewX, NewY, DirX, DirY, NumZipNew2, NumZipNew) ;
+       fail
+    ).
 
 :- begin_tests(eval).
 :- use_module(eval).
@@ -77,6 +92,17 @@ test(all) :-
 test(five) :-
      getScore([[1,1,1,1,0], [0,0,0,0,0], [0,1,1,1,1], [0,0,0,0,0], [1,1,1,0,0]], 1, Score),
      Score == 8.
+
+test(zipzap_col) :-
+    checkZipStart([[1,0,0,0,0], [2,0,0,0,0], [2,0,0,0,0], [2,0,0,0,0], [1,0,0,0,0,0]], 1,0,0,0,1,NumZip),
+    NumZip = 4.
+
+test(zipzap_col, fail) :-
+    checkZipStart([[1,0,0,0,0], [2,0,0,0,0], [2,0,0,0,0], [2,0,0,0,0], [2,0,0,0,0,0]], 1,0,0,0,1,_).
+
+test(zipzap_row) :-
+    checkZipStart([[1,2,2,2,1], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0,0]], 1,0,0,1,0,NumZip),
+    NumZip = 4.
 
 
 :- end_tests(eval).
