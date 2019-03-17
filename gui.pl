@@ -21,7 +21,9 @@ free_globals :-
  free(@time_move), free(@timer_move),
  free(@pict),
  free(@rounds),
- free(@rounds_back).
+ free(@rounds_back),
+ catch(mutex_destroy(update), _E, true),
+ mutex_create(update).
 
 
 
@@ -66,6 +68,8 @@ verify(_Gesture, Event) :-
     allowMoveFrom(R),
     nb_linkval(pos, (X,Y)),
     nb_linkval(pos_screen, (XScreen, YScreen)),
+    get_game((_Board, _Reserves, Turn)), !,
+    nb_linkval(move_turn, Turn),
     XMouse is DX - X,
     YMouse is DY - Y,
     CellX is round((XMouse - BorderSize) / ((PenSize + CellSize))),
@@ -83,9 +87,10 @@ verify(_Gesture, Event) :-
 
 newMove(X,Y) :-
     get_game((Board, Reserves, Turn)), !,
+    b_getval(move_turn, Turn),
     b_getval(from_move, (DragReserve, FromXBoard, FromYBoard)),
-    % writeln(((DragReserve, FromXBoard, FromYBoard), Board, Reserves, Turn, X, Y, (NewBoard, NewReserves))),
     move((DragReserve, FromXBoard, FromYBoard), Board, Reserves, Turn, X, Y, (NewBoard, NewReserves)),
+    % writeln(((DragReserve, FromXBoard, FromYBoard), Board, Reserves, Turn, X, Y, (NewBoard, NewReserves))),
     NewTurn is (Turn mod 3) + 1,
     player_colour(NewTurn, NewCol),
     set_game((NewBoard, NewReserves, NewTurn)),
@@ -96,6 +101,7 @@ newMove(X,Y) :-
 
 
 terminate(_Gesture, Event) :-
+    with_mutex(update, (
     get(Event, receiver, R),
     b_getval(pos, (X2, Y2)),
     sizes(BorderSize, CellSize, PenSize, CircleSize, BoardSize),
@@ -117,7 +123,8 @@ terminate(_Gesture, Event) :-
     get(R, colour, colour(Colour)),
     send(R, fill_pattern, colour(Colour)),
     send(R, x, XEndPos),
-    send(R, y, YEndPos).
+    send(R, y, YEndPos)
+    )).
 
 
 add_balls(StartX, StartY, Num, Colour, CircleSize) :-
@@ -194,6 +201,7 @@ addCircle(CircleSize, X, Y, Colour, Circle) :-
     assert(ball(Circle)).
 
 update_move_timer :-
+    with_mutex(update, (
     get(@time_move, string, string(OldTime)),
     atom_number(OldTime, I),
     NewI is I - 1,
@@ -212,11 +220,7 @@ update_move_timer :-
     retractall(progress(_)),
     assert(progress(NewProgress)),
     adjustPercentage,
-    adjustScore.
-
-
-
-
+    adjustScore)).
 
 addScore() :-
     send(@pict, display, new(@score, text("Score:"))), send(@score, x, 15), send(@score, y, 50),
