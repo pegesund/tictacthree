@@ -40,19 +40,30 @@ evalMatrix(Matrix, X, Y, P, Acc, Score) :-
 
 getScore(Matrix, Person, Score) :- evalMatrix(Matrix, 0, 0, Person, 0, Score).
 
+checkZipStart(_Board, _Player, _X, _Y, 0, 0, _NumZip) :- !, fail.
+
 checkZipStart(Board, Player, X, Y, DirX, DirY, NumZip) :-
     NewY is Y + DirY, NewX is X + DirX,
     nth0(NewY, Board, Row), nth0(NewX, Row, OtherPlayer),
-    checkZip(Board, Player, OtherPlayer, X, Y, DirX, DirY, 0, NumZip).
+    checkZip(Board, Player, OtherPlayer, NewX, NewY, DirX, DirY, 0, NumZip).
+
+checkZip(Board, Player, _OtherPlayer, X, Y, _DirX, _DirY, NumZip, NumZip) :-
+    nth0(Y, Board, Row), nth0(X, Row, OtherPlayerNew),
+    OtherPlayerNew == Player,
+    NumZip > 2, !.
+
+checkZip(Board, _Player, OtherPlayer, X, Y, _DirX, _DirY, _NumZip, _NumZipNew) :-
+     nth0(Y, Board, Row), nth0(X, Row, OtherPlayerNew),
+     OtherPlayerNew \== OtherPlayer,
+     !, fail.
 
 checkZip(Board, Player, OtherPlayer, X, Y, DirX, DirY, NumZip, NumZipNew) :-
+    nth0(Y, Board, Row), nth0(X, Row, _),
     NewY is Y + DirY, NewX is X + DirX,
-    nth0(NewY, Board, Row), nth0(NewX, Row, OtherPlayerNew),
-    (   OtherPlayerNew == Player, NumZip >= 2 -> NumZipNew is NumZip + 1 ;
-        OtherPlayerNew == OtherPlayer -> NumZipNew2 is NumZip + 1,
-           checkZip(Board, Player, OtherPlayer, NewX, NewY, DirX, DirY, NumZipNew2, NumZipNew) ;
-       fail
-    ).
+    NumZipNew2 is NumZip + 1,
+    checkZip(Board, Player, OtherPlayer, NewX, NewY, DirX, DirY, NumZipNew2, NumZipNew).
+
+
 
 :- begin_tests(eval).
 :- use_module(eval).

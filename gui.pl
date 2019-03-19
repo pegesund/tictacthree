@@ -144,7 +144,7 @@ run(BoardSize, NumBalls) :-
     retractall(sizes(_, _, _, _, _)),
     retractall(move_time(_)),
     retractall(round(_,_)),
-    assert(move_time(5)),
+    assert(move_time(8)),
     assert(round(5,60)),
     retractall(progress(_)),
     assert(progress(0)),
@@ -244,10 +244,10 @@ ballAtCoordinate(X,Y,C) :-
     sizes(BorderSize, CellSize, PenSize, _CircleSize, _BoardSize), !,
     CX is (X * (PenSize + CellSize)) + BorderSize,
     CY is (Y * (PenSize + CellSize)) + BorderSize,
-    ball(C), !,
+    ball(C),
     get(C, position, point(PX,PY)),
     PX >= CX, PX < CX + CellSize ,
-    PY >= CY, PY < CY + CellSize , !.
+    PY >= CY, PY < CY + CellSize, !.
 
 existBallWithin(SX, SY, CircleBorder) :-
     ball(C),
@@ -333,3 +333,23 @@ adjustScore :-
      send(@timer_move, stop), !.
 
 adjustScore :- !.
+
+
+
+checkZipNonDeterm(Player, X,Y, NumZip, DirX, DirY) :-
+     get_game((Board, _Reserves, _Turn)), !,
+     member(DirX, [-1,0,1]), member(DirY, [-1,0,1]),
+     checkZipStart(Board, Player, X, Y, DirX, DirY, NumZip),
+     (   between(1, NumZip, I),
+         TurnX is X + (I * DirX),
+         TurnY is Y + (I * DirY),
+         nth0(TurnY, Board, Row), nth0(TurnX, Row, Cell),
+         player_colour(Cell, Col),
+         writeln((TurnX, TurnY)),
+         findFreeReserve(Col, _NumFreeReserver),
+         ballAtCoordinate(TurnX,TurnY,Ball),
+         send(Ball, fill_pattern, colour(purple)),
+         fail ; true
+     ).
+
+
