@@ -9,8 +9,9 @@ free_globals :-
  dynamic(balls),
  dynamic(reserved),
  dynamic(move_time),
- dynamic(cround),
+ dynamic(cround), % number of move secs and number of rounds
  dynamic(progress),
+ dynamic(reserved_ypos),
 
  free(@score),
  free(@red_score),
@@ -24,6 +25,11 @@ free_globals :-
  catch(mutex_destroy(update), _E, true),
  mutex_create(update).
 
+
+:- pce_begin_class(pcircle, circle, "game circle").
+variable(yposr, int, both, "ypos reserved").
+variable(xposr, int, both, "xpos reserverd").
+:- pce_end_class.
 
 
 make_move_piece_gesture(G) :-
@@ -77,8 +83,6 @@ verify(_Gesture, Event) :-
     (   (CellX > BSD ; CellY > BSD ; CellY < 0 ; CellX < 0 )
         -> DragReserve = reserves ; DragReserve = board
     ),
-    % writeln(("Dragreserve: ", DragReserve)),
-    % writeln((CellX, CellY)),
     nb_linkval(from_move, (DragReserve, CellX, CellY)),
     send(R, expose),
     send(R, fill_pattern, gray),
@@ -96,7 +100,8 @@ newMove(X,Y) :-
     send(@turn, fill_pattern, colour(NewCol)),
     move_time(MoveTime), !,
     atom_string(MoveTime, MoveTimeStr),
-    send(@time_move, string, string(MoveTimeStr)).
+    send(@time_move, string, string(MoveTimeStr)),
+    updateZipZap(Turn, X, Y).
 
 
 terminate(_Gesture, Event) :-
@@ -193,10 +198,12 @@ run(BoardSize, NumBalls) :-
 
 addCircle(CircleSize, X, Y, Colour, Circle) :-
     send(@pict, display,
-          new(Circle, circle(CircleSize)), point(X,Y)),
+          new(Circle, pcircle(CircleSize)), point(X,Y)),
     send(Circle, colour(Colour)),
     send(Circle, fill_pattern, colour(Colour)),
     send(Circle, recogniser, new(@make_piece_gesture)),
+    send(Circle, xposr, X),
+    send(Circle, yposr, Y),
     assert(ball(Circle)).
 
 update_move_timer :-
@@ -255,16 +262,6 @@ existBallWithin(SX, SY, CircleBorder) :-
     between(SX, SXEnd, BX),
     between(SY, SYEnd, BY),
     !.
-
-findFreeReserve(Colour, Num) :-
-    sizes(BorderSize, _CellSize, _PenSize, CircleSize, BoardSize), !,
-    reserved(Colour, SY), !,
-    CircleBorder is round(CircleSize * 1.2),
-    between(0, BoardSize, I),
-    SX is BorderSize + round(CircleSize * 1.2 * I),
-    not(existBallWithin(SX, SY, CircleBorder)),
-    Num = I, !,
-    Num < BoardSize.
 
 createRoundCounters :-
     new(@rounds, device),
@@ -339,16 +336,35 @@ checkZipNonDeterm(Player, X,Y, NumZip, DirX, DirY) :-
      get_game((Board, _Reserves, _Turn)), !,
      member(DirX, [-1,0,1]), member(DirY, [-1,0,1]),
      checkZipStart(Board, Player, X, Y, DirX, DirY, NumZip),
+      sizes(_BorderSize, _CellSize, _PenSize, _CircleSize, _BoardSize), !,
      (   between(1, NumZip, I),
          TurnX is X + (I * DirX),
          TurnY is Y + (I * DirY),
          nth0(TurnY, Board, Row), nth0(TurnX, Row, Cell),
          player_colour(Cell, Col),
-         writeln((TurnX, TurnY)),
-         findFreeReserve(Col, _NumFreeReserver),
+         writeln((Col, TurnX, TurnY)),
          ballAtCoordinate(TurnX,TurnY,Ball),
-         send(Ball, fill_pattern, colour(purple)),
+         % send(Ball, fill_pattern, colour(purple)),
+         get(Ball, xposr, XPosR),
+         get(Ball, yposr, YPosR),
+         send(Ball, position, point(XPosR, YPosR)),
          fail ; true
      ).
 
+updateZipZap(Player, X, Y) :-
+     (
+     checkZipNonDeterm(Player, X,Y, NumZip, DirX, DirY),
+     get_game((Board, Reserves, Turn)),
+     updateZip(Board, X, Y, NumZip, DirX, DirY, NBoard),
+     XN is X + DirX,
+     YN is Y + DirY,
+     nth0(YN, Board, Row), nth0(XN, Row, LoosePlayer),
+     add_to_reserves(Reserves, LoosePlayer, NumZip, [], NReserved),
+     set_game((NBoard, NReserved, Turn)),
+     add_score(Player, NumZip - 3),
+     get_score(Player, NewScore),
+     player_colour(Player, Col),
+     updateScore(Col, NewScore),
+     fail ; true
+    ).
 

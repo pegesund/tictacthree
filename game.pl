@@ -1,5 +1,5 @@
 :- module(game, [move/7, generate_reserves/2, set_game/1, get_game/1, player_colour/2, empty_board/2, players/1,
-                 clean_score/0, add_score/2, get_score/2
+                 clean_score/0, add_score/2, get_score/2, add_to_reserves/5, updateZip/7
                 ]).
 
 :- dynamic(game).
@@ -71,19 +71,27 @@ set_game(Game) :-
   assert(game(Game)).
 
 get_game(Game) :-
-  game(Game).
+  game(Game), !.
 
 new_game() :-
   retractall(game(_)).
 
-updateZip(Board, _Player, _X, _Y, 0, _DX, _DY, Board) :- writeln(Board).
+add_to_reserves([], _Player, _Add, NewRes, NewRes) :- !.
+add_to_reserves([[Player|Val]|T], Player, Add, Acc, NewRes) :-
+  NewVal is Val + Add,
+  add_to_reserves(T, Player, Add, [[Player, NewVal]|Acc], NewRes), !.
+add_to_reserves([H|T], Player, Add, Acc, NewRes) :-
+  add_to_reserves(T, Player, Add, [H|Acc], NewRes), !.
 
-updateZip(Board, Player, X, Y, Num, DX, DY, EndBoard) :-
+
+updateZip(Board, _X, _Y, 0, _DX, _DY, Board).
+
+updateZip(Board, X, Y, Num, DX, DY, EndBoard) :-
   NX is X + DX,
   NY is Y + DY,
-  update_board(Board, NX, NY, Player, NewBoard),
+  update_board(Board, NX, NY, 0, NewBoard),
   NNum is Num - 1,
-  updateZip(NewBoard, Player, NX, NY, NNum, DX, DY, EndBoard), !.
+  updateZip(NewBoard, NX, NY, NNum, DX, DY, EndBoard), !.
 
 
 
@@ -143,8 +151,8 @@ test(update_board_move_more_than_one_in_distance, fail) :-
 test(update_zip) :-
         Board = [[1,2,2,2,2,1],[0,0,0,0,0,0],[0,0,0,0,0,0],
                  [0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]],
-        updateZip(Board, 1, 0, 0, 4, 1, 0, NBoard),
-        nth0(0, NBoard , [1,1,1,1,1,1]).
+        updateZip(Board, 0, 0, 4, 1, 0, NBoard),
+        nth0(0, NBoard , [1,0,0,0,0,1]).
 
 test(reverse) :-
         writeln("Testing"),
