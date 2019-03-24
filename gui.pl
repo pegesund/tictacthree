@@ -4,15 +4,14 @@
 :- use_module(game).
 :- use_module(eval).
 
-dynamic(sizes).
-dynamic(balls).
-dynamic(reserved).
-dynamic(move_time).
-dynamic(round).
-dynamic(progress).
-
-
 free_globals :-
+ dynamic(sizes),
+ dynamic(balls),
+ dynamic(reserved),
+ dynamic(move_time),
+ dynamic(cround),
+ dynamic(progress),
+
  free(@score),
  free(@red_score),
  free(@green_score),
@@ -143,9 +142,9 @@ run(BoardSize, NumBalls) :-
     retractall(reserved(_,_)),
     retractall(sizes(_, _, _, _, _)),
     retractall(move_time(_)),
-    retractall(round(_,_)),
+    retractall(cround(_,_)),
     assert(move_time(8)),
-    assert(round(5,60)),
+    assert(cround(5,60)),
     retractall(progress(_)),
     assert(progress(0)),
     BorderSize = 120,
@@ -269,7 +268,7 @@ findFreeReserve(Colour, Num) :-
 
 createRoundCounters :-
     new(@rounds, device),
-    round(Rounds, _RSize), !,
+    cround(Rounds, _RSize), !,
     RoundsDec is Rounds - 1,
     BoxWidth = 30,
     BoxHeight = 20,
@@ -291,7 +290,7 @@ createRoundCounters :-
 adjustPercentage :-
     BoxWidth = 30,
     progress(Prog), !,
-    round(Rounds, RSize),
+    cround(Rounds, RSize),
     TotalSecs is Rounds * RSize,
     WTotal is BoxWidth * Rounds,
     ProgPercentage is Prog / TotalSecs,
@@ -308,7 +307,7 @@ updateScore(green, Score) :-
 
 
 adjustScore :-
-     round(_Rounds, RSize),
+     cround(_Rounds, RSize),
      progress(P),
      D is P mod RSize,
      D == 0,
@@ -326,7 +325,7 @@ adjustScore :-
      ), fail.
 
 adjustScore :-
-     round(Rounds, RSize),
+     cround(Rounds, RSize),
      progress(P),
      Total is Rounds * RSize,
      P >= Total,

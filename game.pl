@@ -2,8 +2,8 @@
                  clean_score/0, add_score/2, get_score/2
                 ]).
 
-dynamic(game).
-dynamic(score).
+:- dynamic(game).
+:- dynamic(score).
 
 players([red, blue, green]).
 
