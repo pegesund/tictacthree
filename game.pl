@@ -76,6 +76,17 @@ get_game(Game) :-
 new_game() :-
   retractall(game(_)).
 
+updateZip(Board, _Player, _X, _Y, 0, _DX, _DY, Board) :- writeln(Board).
+
+updateZip(Board, Player, X, Y, Num, DX, DY, EndBoard) :-
+  NX is X + DX,
+  NY is Y + DY,
+  update_board(Board, NX, NY, Player, NewBoard),
+  NNum is Num - 1,
+  updateZip(NewBoard, Player, NX, NY, NNum, DX, DY, EndBoard), !.
+
+
+
 
 :- begin_tests(game).
 :- use_module(game).
@@ -129,6 +140,11 @@ test(update_board_move_more_than_one_in_distance, fail) :-
         Board = [[1,2,3],[0,0,0],[0,0,0]],
         move((board,0,0), Board, Reserves, 2, 2, 2, _NewGame).
 
+test(update_zip) :-
+        Board = [[1,2,2,2,2,1],[0,0,0,0,0,0],[0,0,0,0,0,0],
+                 [0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]],
+        updateZip(Board, 1, 0, 0, 4, 1, 0, NBoard),
+        nth0(0, NBoard , [1,1,1,1,1,1]).
 
 test(reverse) :-
         writeln("Testing"),
